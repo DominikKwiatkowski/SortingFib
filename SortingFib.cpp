@@ -259,7 +259,7 @@ void merge(File*& destinationFile, File*& firstDisk, File*& secondDisk, double f
 
 void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool breakAfterEachPhase, int initialFileReadLines)
 {
-    double firstLastValue = DBL_MIN, secondLastValue = DBL_MIN;
+    double firstLastValue = -DBL_MAX, secondLastValue = -DBL_MAX;
     double firstRecord[PARAM];
     double secondRecord[PARAM];
     firstDisk->readRecord(firstRecord);
@@ -273,7 +273,7 @@ void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool
             secondDisk->readRecord(secondRecord);
             secondLastValue = value;
         }
-        secondLastValue = DBL_MIN;
+        secondLastValue = -DBL_MAX;
     }
     for (secondDisk->emptySeries; secondDisk->emptySeries > 0; secondDisk->emptySeries--)
     {
@@ -283,7 +283,7 @@ void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool
             firstDisk->readRecord(firstRecord);
             firstLastValue = value;
         }
-        firstLastValue = DBL_MIN;
+        firstLastValue = -DBL_MAX;
     }
     int numberOfPhases = 0;
     while (1)
