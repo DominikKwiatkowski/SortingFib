@@ -104,7 +104,7 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
         {
             if(fileChange)
             {
-                if (oldValue > firstLastValue)
+                if (oldValue >= firstLastValue)
                 {
                     firstLength--;
                 }
@@ -138,7 +138,7 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
         {
             if (fileChange)
             {
-                if (oldValue > secondLastValue && secondLength>0)
+                if (oldValue >= secondLastValue && secondLength>0)
                 {
                     secondLength--;
                 }
@@ -198,6 +198,9 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
     else if (secondLength < b)
         secondLength++;
 
+    firstDisk->changeMode();
+    secondDisk->changeMode();
+
     if (a > b)
         firstDisk->emptySeries = a - firstLength;
     else
@@ -254,7 +257,7 @@ void merge(File*& destinationFile, File*& firstDisk, File*& secondDisk, double f
     }
 }
 
-void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool breakAfterEachPhase)
+void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool breakAfterEachPhase, int initialFileReadLines)
 {
     double firstLastValue = DBL_MIN, secondLastValue = DBL_MIN;
     double firstRecord[PARAM];
@@ -297,7 +300,7 @@ void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool
             string command= "notepad " + destinationFile->fileName;
             system(command.c_str());
             cout << "liczba faz to: " << numberOfPhases<<endl;
-            int readNumber = destinationFile->readPageCounter + firstDisk->readPageCounter + secondDisk->readPageCounter;
+            int readNumber = destinationFile->readPageCounter + firstDisk->readPageCounter + secondDisk->readPageCounter + initialFileReadLines;
             int writeNumber = destinationFile->writePageCounter + firstDisk->writePageCounter + secondDisk->writePageCounter;
             cout << "liczba odczytow dyskowych to: " << readNumber <<" stron"<<endl;
             cout << "liczba zapisow dyskowych to: " << writeNumber << " stron" << endl;
@@ -371,7 +374,7 @@ int main()
     }
 
     int choice = 0;
-    cout << "Czy chcesz ogladac pliki po kazdej fazie sortowania?\n";
+    /*cout << "Czy chcesz ogladac pliki po kazdej fazie sortowania?\n";
     cout << "1.Tak\n";
     cout << "2.Nie\n";
     cin >> choice;
@@ -384,15 +387,15 @@ int main()
     default:
         break;
     }
-
-    system("notepad fileToSort.txt");
-    getchar();
+    */
+    //system("notepad fileToSort.txt");
+    //getchar();
     initialDistribution(fileToSort, firstDisk, secondDisk);
     //fileToSort->changeMode();
-    firstDisk->changeMode();
-    secondDisk->changeMode();
+    int initialFileReadLines = fileToSort->readPageCounter;
+    
     eraseFile("thirdDisk.txt");
     File*thirdDisk = new File("thirdDisk.txt", File::Output);
-    firstMerge(thirdDisk, firstDisk, secondDisk, breakAfterEachPhase);
+    firstMerge(thirdDisk, firstDisk, secondDisk, breakAfterEachPhase, initialFileReadLines);
 }
 
