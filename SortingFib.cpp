@@ -42,11 +42,8 @@ void generateFile(File *&fileToSort,File*&firstDisk,File*&secondDisk)
         generateFile << endl;
     }
     generateFile.close();
-    eraseFile("firstDisk.txt");
-    eraseFile("secondDisk.txt");
     fileToSort = new File("fileToSort.txt", File::Input);
-    firstDisk = new File("firstDisk.txt", File::Output);
-    secondDisk = new File("secondDisk.txt", File::Output);
+    
 }
 
 void loadFile(File* &fileToSort, File* &firstDisk, File* &secondDisk)
@@ -54,11 +51,7 @@ void loadFile(File* &fileToSort, File* &firstDisk, File* &secondDisk)
     string filename;
     cout << "Podaj sciezke do pliku\n";
     cin >> filename;
-    eraseFile("firstDisk.txt");
-    eraseFile("secondDisk.txt");
     fileToSort = new File(filename, File::Input);
-    firstDisk = new File("firstDisk.txt", File::Output);
-    secondDisk = new File("secondDisk.txt", File::Output);
 }
 
 
@@ -82,12 +75,10 @@ void createFileFromInput(File* &fileToSort, File* &firstDisk, File* &secondDisk)
         generateFile << endl;
     }
     generateFile.close();
-    eraseFile("firstDisk.txt");
-    eraseFile("secondDisk.txt");
     fileToSort = new File("fileToSort.txt", File::Input);
-    firstDisk = new File("firstDisk.txt", File::Output);
-    secondDisk = new File("secondDisk.txt", File::Output);
 }
+
+
 
 void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
 {
@@ -192,7 +183,6 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
                 secondLength++;
         }
     }
-
     else if (firstLength < a)
         firstLength++;
     else if (secondLength < b)
@@ -372,6 +362,11 @@ int main()
         if (fileToSort != nullptr)
             break;
     }
+
+    eraseFile("firstDisk.txt");
+    eraseFile("secondDisk.txt");
+    firstDisk = new File("firstDisk.txt", File::Output);
+    secondDisk = new File("secondDisk.txt", File::Output);
 
     int choice = 0;
     /*cout << "Czy chcesz ogladac pliki po kazdej fazie sortowania?\n";
