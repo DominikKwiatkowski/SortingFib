@@ -13,23 +13,43 @@ public:
         Input=0,
         Output=1
     };
-    Mode mode;
+    
+    // name of file
     string fileName;
-    std::fstream fileStream;
+    
+    // number of records in one page
     static constexpr int N = BUFFOR_SIZE / PARAM / sizeof(double);
-    int line=0;
-    int linesReaded = 0;
+
+    //number of empty series in this file
     int emptySeries = 0;
+
     int writePageCounter = 0;
     int readPageCounter = 0;
-    double buffer[N][PARAM];
+
+    bool fileEnd = false;
+
+
     File(string fileName, Mode mode);
+
+    //funtion to read/write records
     int  readRecord(double record[PARAM]);
     void writeRecord(double record[PARAM]);
+
+    //function to change file from source/destination to destination/source
     void changeMode();
+
+    // function for debug purpose, it make stream read from begin of file
     void refresh();
 
 private:
     void readPage();
     void writePage();
+
+    int line = 0;
+    int linesReaded = 0;
+    double buffer[N][PARAM];
+    // file stream
+    std::fstream fileStream;
+    // mode of file, to prevent reading from destination file and writing to source file
+    Mode mode;
 };

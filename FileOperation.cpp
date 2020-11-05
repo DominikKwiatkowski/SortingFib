@@ -101,6 +101,7 @@ void File::changeMode()
         mode = Input;
         readPage();
     }
+    fileEnd = false;
 }
 
 void File::refresh()
