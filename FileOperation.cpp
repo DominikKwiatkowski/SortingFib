@@ -19,6 +19,7 @@ File::File(string fileName, Mode mode)
 
 void File::readPage()
 {
+    this->readPageCounter++;
     for (int i = 0; i < N; i++)
     {
         for (int j = 0; j < PARAM; j++)
@@ -32,7 +33,7 @@ void File::readPage()
         }
     }
     linesReaded = N;
-    this->line = 0;
+    this->line = 0; 
 }
 
 void File::writePage()
@@ -46,6 +47,7 @@ void File::writePage()
         this->fileStream << endl;
     }
     this->line = 0;
+    this->writePageCounter++;
 }
 
 int File::readRecord(double record[PARAM])

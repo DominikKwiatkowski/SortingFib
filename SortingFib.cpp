@@ -36,7 +36,7 @@ void generateFile(File *&fileToSort,File*&firstDisk,File*&secondDisk)
     {
         for(int j=0;j<PARAM;j++)
         {
-            int generatedNumber = rand()%128;
+            int generatedNumber = rand();
             generateFile << generatedNumber << " ";
         }
         generateFile << endl;
@@ -204,103 +204,57 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
         secondDisk->emptySeries = b - secondLength;
 }
 
-void merge(File*& destinationFile, File*& firstDisk, File*& secondDisk, double firstRecord[PARAM], double secondRecord[PARAM])
+void writeRecord(double &value, double &lastValue, File *& disk, File*&destinationFile,bool& recordEnd, double record[PARAM])
+{
+    destinationFile->writeRecord(record);
+    if (disk->readRecord(record))
+    {
+        recordEnd = true;
+        value = -DBL_MAX;
+    }
+    else
+    {
+        lastValue = value;
+        value = g(record[0], record[1], record[2], record[3], record[4]);
+    }
+}
+
+void merge(File*& destinationFile, File*& firstDisk, File*& secondDisk, double firstRecord[PARAM], double secondRecord[PARAM],bool& firstRecordEnd, bool& secondRecordEnd)
 {
     double firstLastValue = -DBL_MAX, secondLastValue = -DBL_MAX;
     double firstValue = g(firstRecord[0], firstRecord[1], firstRecord[2], firstRecord[3], firstRecord[4]);
     double secondValue = g(secondRecord[0], secondRecord[1], secondRecord[2], secondRecord[3], secondRecord[4]);
-    bool firstRecordEnd = false;
-    bool secondRecordEnd = false;
+    
     while (firstRecordEnd == false && secondRecordEnd == false)
     {
         while (firstValue >= firstLastValue && firstRecordEnd == false && secondValue >= secondLastValue && secondRecordEnd == false)
         {
             if (firstValue > secondValue)
             {
-                destinationFile->writeRecord(secondRecord);
-                if (secondDisk->readRecord(secondRecord))
-                {
-                    secondRecordEnd = true;
-                    secondValue = -DBL_MAX;
-                }
-                else
-                {
-                    secondLastValue = secondValue;
-                    secondValue = g(secondRecord[0], secondRecord[1], secondRecord[2], secondRecord[3], secondRecord[4]);
-                }
+                writeRecord(secondValue, secondLastValue, secondDisk, destinationFile, secondRecordEnd, secondRecord);
             }
             else
             {
-                destinationFile->writeRecord(firstRecord);
-                if (firstDisk->readRecord(firstRecord))
-                {
-                    firstRecordEnd = true;
-                    firstValue = -DBL_MAX;
-                }
-                else
-                {
-                    firstLastValue = firstValue;
-                    firstValue = g(firstRecord[0], firstRecord[1], firstRecord[2], firstRecord[3], firstRecord[4]);
-                }
+                writeRecord(firstValue, firstLastValue, firstDisk, destinationFile, firstRecordEnd, firstRecord);
             }
         }
 
         //end second series
         while (firstValue >= firstLastValue && firstRecordEnd == false)
         {
-            destinationFile->writeRecord(firstRecord);
-            if (firstDisk->readRecord(firstRecord))
-            {
-                firstRecordEnd = true;
-                firstValue = -DBL_MAX;
-            }
-            else
-            {
-                firstLastValue = firstValue;
-                firstValue = g(firstRecord[0], firstRecord[1], firstRecord[2], firstRecord[3], firstRecord[4]);
-            }
+            writeRecord(firstValue, firstLastValue, firstDisk, destinationFile, firstRecordEnd, firstRecord);
         }
 
         while (secondValue >= secondLastValue && secondRecordEnd == false)
         {
-            destinationFile->writeRecord(secondRecord);
-            if (secondDisk->readRecord(secondRecord))
-            {
-                secondRecordEnd = true;
-                secondValue = -DBL_MAX;
-            }
-            else
-            {
-                secondLastValue = secondValue;
-                secondValue = g(secondRecord[0], secondRecord[1], secondRecord[2], secondRecord[3], secondRecord[4]);
-            }
+            writeRecord(secondValue, secondLastValue, secondDisk, destinationFile, secondRecordEnd, secondRecord);
         }
 
         firstLastValue = -DBL_MAX, secondLastValue = -DBL_MAX;
     }
-
-    
-    destinationFile->changeMode();
-    if (firstRecordEnd && secondRecordEnd)
-    {
-        cout << "plik z posortowanymi danymi to: " << destinationFile->fileName;
-        return;
-    }
-    if(firstRecordEnd)
-    {
-        firstDisk->changeMode();
-        destinationFile->readRecord(firstRecord);
-        merge(firstDisk, destinationFile, secondDisk, firstRecord, secondRecord);
-    }
-    else
-    {
-        secondDisk->changeMode();
-        destinationFile->readRecord(secondRecord);
-        merge(secondDisk, firstDisk, destinationFile, firstRecord, secondRecord);
-    }
 }
 
-void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk)
+void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bool breakAfterEachPhase)
 {
     double firstLastValue = DBL_MIN, secondLastValue = DBL_MIN;
     double firstRecord[PARAM];
@@ -328,7 +282,59 @@ void firstMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk)
         }
         firstLastValue = DBL_MIN;
     }
-    merge(destinationFile, firstDisk, secondDisk, firstRecord, secondRecord);
+    int numberOfPhases = 0;
+    while (1)
+    {
+        numberOfPhases++;
+        bool firstRecordEnd = false;
+        bool secondRecordEnd = false;
+        merge(destinationFile, firstDisk, secondDisk, firstRecord, secondRecord,firstRecordEnd,secondRecordEnd);
+        destinationFile->changeMode();
+
+        if (firstRecordEnd && secondRecordEnd)
+        {
+            cout << "plik z posortowanymi danymi to: " << destinationFile->fileName<<endl;
+            string command= "notepad " + destinationFile->fileName;
+            system(command.c_str());
+            cout << "liczba faz to: " << numberOfPhases<<endl;
+            int readNumber = destinationFile->readPageCounter + firstDisk->readPageCounter + secondDisk->readPageCounter;
+            int writeNumber = destinationFile->writePageCounter + firstDisk->writePageCounter + secondDisk->writePageCounter;
+            cout << "liczba odczytow dyskowych to: " << readNumber <<" stron"<<endl;
+            cout << "liczba zapisow dyskowych to: " << writeNumber << " stron" << endl;
+            cout << "calkowita liczba operacji dyskowych: " << readNumber + writeNumber << " stron" << endl;
+            break;
+        }
+
+        if (breakAfterEachPhase)
+        {
+            int choice;
+            cout << "Najnowszy plik(docelowy z poprzedniej fazy):\n";
+            string command = "notepad " + destinationFile->fileName;
+            system(command.c_str());
+            cout << "czy chcesz przejsc do konca?\n";
+            cout << "1.tak\n";
+            cout << "2.Nie\n";
+            cin >> choice;
+            if (choice = 1)
+            {
+                breakAfterEachPhase = false;
+            }
+        }
+        if (firstRecordEnd)
+        {
+            firstDisk->changeMode();
+            destinationFile->readRecord(firstRecord);
+            swap(firstDisk, destinationFile);
+            merge(destinationFile, firstDisk,secondDisk, firstRecord, secondRecord, firstRecordEnd, secondRecordEnd);
+        }
+        else 
+        {
+            secondDisk->changeMode();
+            destinationFile->readRecord(secondRecord);
+            swap(destinationFile, secondDisk);
+            merge(destinationFile, firstDisk, secondDisk, firstRecord, secondRecord, firstRecordEnd, secondRecordEnd);
+        }
+    }
 }
 
 int main()
@@ -336,6 +342,7 @@ int main()
     File *fileToSort = nullptr;
     File* firstDisk = nullptr;
     File * secondDisk = nullptr;
+    bool breakAfterEachPhase = false;
     while(true)
     {
         int choice = 0;
@@ -363,12 +370,29 @@ int main()
             break;
     }
 
+    int choice = 0;
+    cout << "Czy chcesz ogladac pliki po kazdej fazie sortowania?\n";
+    cout << "1.Tak\n";
+    cout << "2.Nie\n";
+    cin >> choice;
+    cout << endl;
+    switch(choice)
+    {
+    case 1:
+        breakAfterEachPhase = true;
+        break;
+    default:
+        break;
+    }
+
+    system("notepad fileToSort.txt");
+    getchar();
     initialDistribution(fileToSort, firstDisk, secondDisk);
     //fileToSort->changeMode();
     firstDisk->changeMode();
     secondDisk->changeMode();
     eraseFile("thirdDisk.txt");
     File*thirdDisk = new File("thirdDisk.txt", File::Output);
-    firstMerge(thirdDisk, firstDisk, secondDisk);
+    firstMerge(thirdDisk, firstDisk, secondDisk, breakAfterEachPhase);
 }
 

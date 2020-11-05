@@ -20,6 +20,8 @@ public:
     int line=0;
     int linesReaded = 0;
     int emptySeries = 0;
+    int writePageCounter = 0;
+    int readPageCounter = 0;
     double buffer[N][PARAM];
     File(string fileName, Mode mode);
     int  readRecord(double record[PARAM]);
