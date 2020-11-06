@@ -3,9 +3,9 @@
 
 File::File(string fileName, Mode mode)
 {
-    this->fileStream.open(fileName, fstream::in | fstream::out |fstream::app);
+    this->file = fopen(fileName.c_str(), "a+b");
     this->fileName = fileName;
-    if (!this->fileStream.good())
+    if (file == NULL)
     {
         cout << "Exception during opening file!";
     }
@@ -24,7 +24,7 @@ void File::readPage()
     {
         for (int j = 0; j < PARAM; j++)
         {
-            if(!(this->fileStream >> this->buffer[i][j]))
+            if(fread(&this->buffer[i][j], sizeof(double), 1, file)==0)
             {
                 linesReaded = i;
                 this->line = 0;
@@ -38,14 +38,9 @@ void File::readPage()
 
 void File::writePage()
 {
-    for (int i = 0; i < line; i++)
-    {
-        for (int j = 0; j < PARAM; j++)
-        {
-            this->fileStream << static_cast<int>(this->buffer[i][j])<<" ";
-        }
-        this->fileStream << endl;
-    }
+
+    fwrite(this->buffer,sizeof(double),line*PARAM,file);
+
     this->line = 0;
     this->writePageCounter++;
 }
@@ -87,37 +82,27 @@ void File::changeMode()
 {
     if(mode == Input)
     {
-        fileStream.close();
+        fclose(file);
         remove(fileName.c_str());
-        fileStream.open(fileName, fstream::in | fstream::out | fstream::app);
+        this->file = fopen(fileName.c_str(), "a+b");
+        if (file == NULL)
+        {
+            cout << "Exception during opening file!";
+        }
         line = 0;
         mode = Output;
     }
     else
     {
         writePage();
-        fileStream.close();
-        fileStream.open(fileName);
+        fclose(file);
+        this->file = fopen(fileName.c_str(), "a+b");
+        if (file == NULL)
+        {
+            cout << "Exception during opening file!";
+        }
         mode = Input;
         readPage();
     }
     fileEnd = false;
 }
-
-void File::refresh()
-{
-    if (mode == Input)
-    {
-        fileStream.close();
-
-        fileStream.open(fileName);
-        readPage();
-    }
-    else
-    {
-        writePage();
-        fileStream.close();
-        fileStream.open(fileName);
-    }
-}
-

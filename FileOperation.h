@@ -38,9 +38,6 @@ public:
     //function to change file from source/destination to destination/source
     void changeMode();
 
-    // function for debug purpose, it make stream read from begin of file
-    void refresh();
-
 private:
     void readPage();
     void writePage();
@@ -49,7 +46,7 @@ private:
     int linesReaded = 0;
     double buffer[N][PARAM];
     // file stream
-    std::fstream fileStream;
+    FILE* file;
     // mode of file, to prevent reading from destination file and writing to source file
     Mode mode;
 };

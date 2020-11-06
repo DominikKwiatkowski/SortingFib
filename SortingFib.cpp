@@ -8,6 +8,27 @@
 #include <cstdlib>
 #include <cmath>
 #include <float.h>
+#include <stdio.h>
+
+
+void printFile(string fileName)
+{
+    double number;
+    FILE* file = fopen(fileName.c_str(), "r");
+    while(true)
+    {
+        for (int j = 0; j < PARAM; j++)
+        {
+            if (fread(&number, sizeof(double), 1, file) == 0)
+            {
+               
+                return;
+            }
+            cout << number << " ";
+        }
+        cout << endl;
+    }
+}
 
 //g(a,y,c,z,x)=10a[x2+3c3z4-5y7]
 double g(double a, double y, double c, double z, double x)
@@ -20,20 +41,19 @@ double g(double a, double y, double c, double z, double x)
 //function erase file from a disk
 void eraseFile(string fileName)
 {
-    fstream file;
-    file.open(fileName, fstream::in | fstream::out | fstream::app);
-    file.close();
+    FILE* f = fopen(fileName.c_str(), "ab");
+    fclose(f);
     remove(fileName.c_str());
 }
 
 
 //function take number of records to generate from user and 
-void generateFile(File *&fileToSort,File*&firstDisk,File*&secondDisk,string filename)
+void generateFile(File *&fileToSort,string filename)
 {
     int recordNumber;
-    fstream generateFile;
+    FILE* generateFile;
     eraseFile(filename);
-    generateFile.open(filename, fstream::in | fstream::out | fstream::app);
+    generateFile = fopen(filename.c_str(), "ab");
     cout << "Podaj liczbe rekordow\n";
     cin >> recordNumber;
     srand(time(NULL));
@@ -41,46 +61,43 @@ void generateFile(File *&fileToSort,File*&firstDisk,File*&secondDisk,string file
     {
         for(int j=0;j<PARAM;j++)
         {
-            int generatedNumber = rand();
-            generateFile << generatedNumber << " ";
+            double generatedNumber = rand();
+            fwrite(&generatedNumber,sizeof(double),1,generateFile);
         }
-        generateFile << endl;
     }
-    generateFile.close();
+    fclose(generateFile);
     fileToSort = new File(filename, File::Input);
     
 }
 
 //function take filename from user and open it
-void loadFile(File* &fileToSort, File* &firstDisk, File* &secondDisk)
+void loadFile(File* &fileToSort, string& filename)
 {
-    string filename;
     cout << "Podaj sciezke do pliku\n";
     cin >> filename;
     fileToSort = new File(filename, File::Input);
 }
 
 //function create file from input
-void createFileFromInput(File* &fileToSort, File* &firstDisk, File* &secondDisk,string filename)
+void createFileFromInput(File* &fileToSort, string filename)
 {
     double recordNumber;
-    fstream generateFile;
+    FILE* generateFile;
     eraseFile(filename);
-    generateFile.open(filename, fstream::in | fstream::out | fstream::app);
+    generateFile = fopen(filename.c_str(), "ab");
     cout << "Podaj liczbe rekordow\n";
     cin >> recordNumber;
     cout << "podaj rekordy, kazdy rekord ma " << PARAM << " parametrow oddzielonych spacja\n";
-    int number;
+    double number;
     for (int i = 0; i < recordNumber; i++)
     {
         for (int j = 0; j < PARAM; j++)
         {
             cin >> number;
-            generateFile << number << " ";
+            fwrite(&number, sizeof(double), 1, generateFile);
         }
-        generateFile << endl;
     }
-    generateFile.close();
+    fclose(generateFile);
     fileToSort = new File(filename, File::Input);
 }
 
@@ -94,13 +111,19 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
     double previousRecord[PARAM];
     double oldValue=0;
     bool fileChange = false;
+
+    //1. while we have records in main file
     while(fileToSort->readRecord(record)==0)
     {
         double value = g(record[0], record[1], record[2], record[3], record[4]);
+
+       //2. check to which file should record go
         if(firstLength<a)
         {
+            //3. if we changed file, we have to check if sticking happened
             if(fileChange)
             {
+                //if sticked, change number of series
                 if (oldValue >= firstLastValue)
                 {
                     firstLength--;
@@ -109,10 +132,12 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
                 firstDisk->writeRecord(previousRecord);
                 fileChange = false;
             }
+
+            //4. If series end
             if(value < firstLastValue)
             {
-                //end of series
                 firstLength++;
+                //5. if we need to change file after this record
                 if(firstLength==a)
                 {
                     fileChange = true;
@@ -125,12 +150,14 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
                     firstLastValue = value;
                 }
             }
+
             else
             {
                 firstDisk->writeRecord(record);
                 firstLastValue = value;
             }
         }
+        //6. Analogical to second file
         else if(secondLength<b)
         {
             if (fileChange)
@@ -165,6 +192,8 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
                 secondLastValue = value;
             }
         }
+
+        //7. If both file have enough series, we have to increase number of series in smaller file
         if(firstLength==a && secondLength==b)
         {
             if (a > b)
@@ -173,7 +202,7 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
                 a += b;
         }
     }
-    
+    //8. if last record ggo to diffrent file, we have to handle this case
     if(fileChange==true)
     {
         if (firstLength < a)
@@ -189,6 +218,7 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
                 secondLength++;
         }
     }
+    //9. if not, we have to add one series to file we currenty writing in
     else if (firstLength < a)
         firstLength++;
     else if (secondLength < b)
@@ -197,6 +227,7 @@ void initialDistribution(File*& fileToSort, File*& firstDisk, File*& secondDisk)
     firstDisk->changeMode();
     secondDisk->changeMode();
 
+    //10. Counting number of empty series
     if (a > b)
         firstDisk->emptySeries = a - firstLength;
     else
@@ -309,8 +340,7 @@ void performMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bo
         if (firstDisk->fileEnd && secondDisk->fileEnd)
         {
             cout << "plik z posortowanymi danymi to: " << destinationFile->fileName<<endl;
-            string command= "notepad " + destinationFile->fileName;
-            system(command.c_str());
+            printFile(destinationFile->fileName);
             cout << "liczba faz to: " << numberOfPhases<<endl;
             int readNumber = destinationFile->readPageCounter + firstDisk->readPageCounter + secondDisk->readPageCounter + initialFileReadLines;
             int writeNumber = destinationFile->writePageCounter + firstDisk->writePageCounter + secondDisk->writePageCounter;
@@ -325,8 +355,7 @@ void performMerge(File*& destinationFile, File*& firstDisk, File*& secondDisk,bo
         {
             int choice;
             cout << "Najnowszy plik(docelowy z poprzedniej fazy):\n";
-            string command = "notepad " + destinationFile->fileName;
-            system(command.c_str());
+            printFile(destinationFile->fileName);
             cout << "czy chcesz przejsc do konca?\n";
             cout << "1.tak\n";
             cout << "2.Nie\n";
@@ -364,8 +393,10 @@ int main()
     File * secondDisk = nullptr;
     bool breakAfterEachPhase = false;
 
-    string filename = "fileToSort.txt";  // initial file name
-
+    string filename = "fileToSort.dat";  // initial file name
+    const string firstDiskName = "firstDisk.dat";
+    const string secondDiskName = "secondDisk.dat";
+    const string thirdDiskName = "thirdDisk.dat";
     //1. intial menu, choosing way to give input
     while(true)
     {
@@ -379,13 +410,13 @@ int main()
         switch(choice)
         {
         case 1:
-            generateFile(fileToSort,firstDisk,secondDisk, filename);
+            generateFile(fileToSort, filename);
             break;
         case 2:
-            loadFile(fileToSort, firstDisk, secondDisk);
+            loadFile(fileToSort, filename);
             break;
         case 3:
-            createFileFromInput(fileToSort, firstDisk, secondDisk, filename);
+            createFileFromInput(fileToSort, filename);
             break;
         default:
             cout << "Unexpected option!!!";
@@ -395,14 +426,17 @@ int main()
     }
 
     //2. preparing file disk
-    eraseFile("firstDisk.txt");
-    eraseFile("secondDisk.txt");
-    firstDisk = new File("firstDisk.txt", File::Output);
-    secondDisk = new File("secondDisk.txt", File::Output);
+    eraseFile(firstDiskName);
+    eraseFile(secondDiskName);
+    eraseFile(thirdDiskName);
+
+    firstDisk = new File(firstDiskName, File::Output);
+    secondDisk = new File(secondDiskName, File::Output);
+    File* thirdDisk = new File(thirdDiskName, File::Output);
 
     //3. asking about printing
     int choice = 0;
-    /*cout << "Czy chcesz ogladac pliki po kazdej fazie sortowania?\n";
+    cout << "Czy chcesz ogladac pliki po kazdej fazie sortowania?\n";
     cout << "1.Tak\n";
     cout << "2.Nie\n";
     cin >> choice;
@@ -415,17 +449,17 @@ int main()
     default:
         break;
     }
-    */
-    //system("notepad fileToSort.txt");
-    //getchar();
+
+    printFile(filename);
+    getchar();
     
     //4. perform merge operations
     initialDistribution(fileToSort, firstDisk, secondDisk);
     //fileToSort->changeMode();
     int initialFileReadLines = fileToSort->readPageCounter;
     
-    eraseFile("thirdDisk.txt");
-    File*thirdDisk = new File("thirdDisk.txt", File::Output);
+    
+    
     performMerge(thirdDisk, firstDisk, secondDisk, breakAfterEachPhase, initialFileReadLines);
 
     return 0;
